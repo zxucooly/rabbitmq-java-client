@@ -25,7 +25,8 @@ public class MyConsumer {
         ConnectionFactory connectionFactory = new ConnectionFactory();
         connectionFactory.setAutomaticRecoveryEnabled(false);
         // 指标收集
-        connectionFactory.setMetricsCollector(new StandardMetricsCollector());
+        StandardMetricsCollector metricsCollector = new StandardMetricsCollector();
+        connectionFactory.setMetricsCollector(metricsCollector);
         Connection connection = connectionFactory.newConnection(threadPoolExecutor, "my____consumer");
         Channel channel = connection.createChannel();
         HashMap<String, Object> map = new HashMap<>();
@@ -33,6 +34,7 @@ public class MyConsumer {
         String myqueue = "myqueue";
         channel.queueDeclare(myqueue, true, false, false, map);
 
+        System.out.println("metricsCollector.getConnections() = " + metricsCollector.getConnections());
         channel.basicConsume(myqueue, new DefaultConsumer(channel) {
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {

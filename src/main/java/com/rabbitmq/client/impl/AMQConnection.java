@@ -664,10 +664,10 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                 while (_running) {
                     Frame frame = _frameHandler.readFrame();
                     if (frame == null) {
-                        System.out.println("frame = " + frame);
+                        LoggerFactory.getLogger(getClass()).info("frame = " + frame);
                     }
                     else {
-                        System.out.println("frame = " + frame + "\n>>>>" + new String(frame.getPayload()) + ">>>>\n");
+                        LoggerFactory.getLogger(getClass()).info("frame = " + frame + "\n>>>>" + new String(frame.getPayload()) + ">>>>\n");
                     }
                     readFrame(frame);
                 }
