@@ -663,6 +663,12 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             try {
                 while (_running) {
                     Frame frame = _frameHandler.readFrame();
+                    if (frame == null) {
+                        System.out.println("frame = " + frame);
+                    }
+                    else {
+                        System.out.println("frame = " + frame + "\n>>>>" + new String(frame.getPayload()) + ">>>>\n");
+                    }
                     readFrame(frame);
                 }
             } catch (Throwable ex) {

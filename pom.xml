@@ -216,145 +216,145 @@
           <name>!skipTests</name>
         </property>
       </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.gmaven</groupId>
-            <artifactId>groovy-maven-plugin</artifactId>
-            <version>${groovy.maven.plugin.version}</version>
-            <dependencies>
-              <dependency>
-                <groupId>org.codehaus.groovy</groupId>
-                <artifactId>groovy-all</artifactId>
-                <version>${groovy.all.version}</version>
-              </dependency>
-            </dependencies>
-            <executions>
-              <!--
-              We use "${rabbitmq.dir}/Makefile" to query the location of
-              the test TLS certificates.
-              -->
-              <execution>
-                <phase>generate-test-resources</phase>
-                <id>query-test-tls-certs-dir</id>
-                <goals>
-                  <goal>execute</goal>
-                </goals>
-                <configuration>
-                  <source>
-                    ${groovy-scripts.dir}/query_test_tls_certs_dir.groovy
-                  </source>
-                </configuration>
-              </execution>
+<!--      <build>-->
+<!--        <plugins>-->
+<!--          <plugin>-->
+<!--            <groupId>org.codehaus.gmaven</groupId>-->
+<!--            <artifactId>groovy-maven-plugin</artifactId>-->
+<!--            <version>${groovy.maven.plugin.version}</version>-->
+<!--            <dependencies>-->
+<!--              <dependency>-->
+<!--                <groupId>org.codehaus.groovy</groupId>-->
+<!--                <artifactId>groovy-all</artifactId>-->
+<!--                <version>${groovy.all.version}</version>-->
+<!--              </dependency>-->
+<!--            </dependencies>-->
+<!--            <executions>-->
+<!--              &lt;!&ndash;-->
+<!--              We use "${rabbitmq.dir}/Makefile" to query the location of-->
+<!--              the test TLS certificates.-->
+<!--              &ndash;&gt;-->
+<!--              <execution>-->
+<!--                <phase>generate-test-resources</phase>-->
+<!--                <id>query-test-tls-certs-dir</id>-->
+<!--                <goals>-->
+<!--                  <goal>execute</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <source>-->
+<!--                    ${groovy-scripts.dir}/query_test_tls_certs_dir.groovy-->
+<!--                  </source>-->
+<!--                </configuration>-->
+<!--              </execution>-->
 
-              <!--
-              Start two brokers and cluster them.
+<!--              &lt;!&ndash;-->
+<!--              Start two brokers and cluster them.-->
 
-              Currently, those test brokers will listen to the default
-              TCP ports of 5672 and 5673 for AMQP and 5671 and 5670
-              for AMQP+TLS. Unfortunately, this means no other standard
-              RabbitMQ can run on the same host at the same time.
-              -->
-              <execution>
-                <phase>pre-integration-test</phase>
-                <id>start-test-broker-A</id>
-                <goals>
-                  <goal>execute</goal>
-                </goals>
-                <configuration>
-                  <properties>
-                    <nodename>${test-broker.A.nodename}</nodename>
-                    <node_port>${test-broker.A.node_port}</node_port>
-                  </properties>
-                  <source>
-                    ${groovy-scripts.dir}/manage_test_broker.groovy
-                  </source>
-                </configuration>
-              </execution>
-              <execution>
-                <phase>pre-integration-test</phase>
-                <id>start-test-broker-B</id>
-                <goals>
-                  <goal>execute</goal>
-                </goals>
-                <configuration>
-                  <properties>
-                    <nodename>${test-broker.B.nodename}</nodename>
-                    <node_port>${test-broker.B.node_port}</node_port>
-                  </properties>
-                  <source>
-                    ${groovy-scripts.dir}/manage_test_broker.groovy
-                  </source>
-                </configuration>
-              </execution>
-              <execution>
-                <phase>pre-integration-test</phase>
-                <id>create-test-cluster</id>
-                <goals>
-                  <goal>execute</goal>
-                </goals>
-                <configuration>
-                  <properties>
-                    <nodename>${test-broker.B.nodename}</nodename>
-                    <target>${test-broker.A.nodename}</target>
-                  </properties>
-                  <source>
-                    ${groovy-scripts.dir}/manage_test_broker.groovy
-                  </source>
-                </configuration>
-              </execution>
+<!--              Currently, those test brokers will listen to the default-->
+<!--              TCP ports of 5672 and 5673 for AMQP and 5671 and 5670-->
+<!--              for AMQP+TLS. Unfortunately, this means no other standard-->
+<!--              RabbitMQ can run on the same host at the same time.-->
+<!--              &ndash;&gt;-->
+<!--              <execution>-->
+<!--                <phase>pre-integration-test</phase>-->
+<!--                <id>start-test-broker-A</id>-->
+<!--                <goals>-->
+<!--                  <goal>execute</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <properties>-->
+<!--                    <nodename>${test-broker.A.nodename}</nodename>-->
+<!--                    <node_port>${test-broker.A.node_port}</node_port>-->
+<!--                  </properties>-->
+<!--                  <source>-->
+<!--                    ${groovy-scripts.dir}/manage_test_broker.groovy-->
+<!--                  </source>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--              <execution>-->
+<!--                <phase>pre-integration-test</phase>-->
+<!--                <id>start-test-broker-B</id>-->
+<!--                <goals>-->
+<!--                  <goal>execute</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <properties>-->
+<!--                    <nodename>${test-broker.B.nodename}</nodename>-->
+<!--                    <node_port>${test-broker.B.node_port}</node_port>-->
+<!--                  </properties>-->
+<!--                  <source>-->
+<!--                    ${groovy-scripts.dir}/manage_test_broker.groovy-->
+<!--                  </source>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--              <execution>-->
+<!--                <phase>pre-integration-test</phase>-->
+<!--                <id>create-test-cluster</id>-->
+<!--                <goals>-->
+<!--                  <goal>execute</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <properties>-->
+<!--                    <nodename>${test-broker.B.nodename}</nodename>-->
+<!--                    <target>${test-broker.A.nodename}</target>-->
+<!--                  </properties>-->
+<!--                  <source>-->
+<!--                    ${groovy-scripts.dir}/manage_test_broker.groovy-->
+<!--                  </source>-->
+<!--                </configuration>-->
+<!--              </execution>-->
 
-              <!--
-              After the testsuite, no matter the result, stop both test brokers.
-              -->
-              <execution>
-                <phase>post-integration-test</phase>
-                <id>stop-test-broker-B</id>
-                <goals>
-                  <goal>execute</goal>
-                </goals>
-                <configuration>
-                  <properties>
-                    <nodename>${test-broker.B.nodename}</nodename>
-                  </properties>
-                  <source>
-                    ${groovy-scripts.dir}/manage_test_broker.groovy
-                  </source>
-                </configuration>
-              </execution>
-              <execution>
-                <phase>post-integration-test</phase>
-                <id>stop-test-broker-A</id>
-                <goals>
-                  <goal>execute</goal>
-                </goals>
-                <configuration>
-                  <properties>
-                    <nodename>${test-broker.A.nodename}</nodename>
-                  </properties>
-                  <source>
-                    ${groovy-scripts.dir}/manage_test_broker.groovy
-                  </source>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
+<!--              &lt;!&ndash;-->
+<!--              After the testsuite, no matter the result, stop both test brokers.-->
+<!--              &ndash;&gt;-->
+<!--              <execution>-->
+<!--                <phase>post-integration-test</phase>-->
+<!--                <id>stop-test-broker-B</id>-->
+<!--                <goals>-->
+<!--                  <goal>execute</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <properties>-->
+<!--                    <nodename>${test-broker.B.nodename}</nodename>-->
+<!--                  </properties>-->
+<!--                  <source>-->
+<!--                    ${groovy-scripts.dir}/manage_test_broker.groovy-->
+<!--                  </source>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--              <execution>-->
+<!--                <phase>post-integration-test</phase>-->
+<!--                <id>stop-test-broker-A</id>-->
+<!--                <goals>-->
+<!--                  <goal>execute</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <properties>-->
+<!--                    <nodename>${test-broker.A.nodename}</nodename>-->
+<!--                  </properties>-->
+<!--                  <source>-->
+<!--                    ${groovy-scripts.dir}/manage_test_broker.groovy-->
+<!--                  </source>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
 
-          <!--
-          Generate two Java keystores from the test TLS certificates.
-          Here, we only enable the plugin. The actual configuration is
-          in the main <build /> element.
-          -->
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>keytool-maven-plugin</artifactId>
-            <version>${keytool.maven.plugin.version}</version>
-            <configuration>
-              <skip>false</skip>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
+<!--          &lt;!&ndash;-->
+<!--          Generate two Java keystores from the test TLS certificates.-->
+<!--          Here, we only enable the plugin. The actual configuration is-->
+<!--          in the main <build /> element.-->
+<!--          &ndash;&gt;-->
+<!--          <plugin>-->
+<!--            <groupId>org.codehaus.mojo</groupId>-->
+<!--            <artifactId>keytool-maven-plugin</artifactId>-->
+<!--            <version>${keytool.maven.plugin.version}</version>-->
+<!--            <configuration>-->
+<!--              <skip>false</skip>-->
+<!--            </configuration>-->
+<!--          </plugin>-->
+<!--        </plugins>-->
+<!--      </build>-->
     </profile>
 
     <profile>
@@ -759,6 +759,11 @@
       <version>${bouncycastle.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.rabbitmq</groupId>
+      <artifactId>amqp-client</artifactId>
+      <version>5.12.0</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -804,68 +809,68 @@
           </nonFilteredFileExtensions>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.codehaus.gmaven</groupId>
-        <artifactId>groovy-maven-plugin</artifactId>
-        <version>${groovy.maven.plugin.version}</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-all</artifactId>
-            <version>${groovy.all.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <!--
-          Generate Java source files from specifications found in
-          ${codegen.dir}. The groovy script is used as a "proxy"
-          to execute a Python script with the proper arguments and
-          environment.
-          -->
-          <execution>
-            <phase>generate-sources</phase>
-            <id>generate-amqp-sources</id>
-            <goals>
-              <goal>execute</goal>
-            </goals>
-            <configuration>
-              <properties>
-                <script>${basedir}/codegen.py</script>
-                <spec>
-                  ${codegen.dir}/amqp-rabbitmq-${codegen.spec_version}.json
-                </spec>
-                <header>
-                  ${project.build.directory}/generated-sources/src/main/java/com/rabbitmq/client/AMQP.java
-                </header>
-                <body>
-                  ${project.build.directory}/generated-sources/src/main/java/com/rabbitmq/client/impl/AMQImpl.java
-                </body>
-              </properties>
-              <source>
-                ${groovy-scripts.dir}/generate_amqp_sources.groovy
-              </source>
-            </configuration>
-          </execution>
+<!--      <plugin>-->
+<!--        <groupId>org.codehaus.gmaven</groupId>-->
+<!--        <artifactId>groovy-maven-plugin</artifactId>-->
+<!--        <version>${groovy.maven.plugin.version}</version>-->
+<!--        <dependencies>-->
+<!--          <dependency>-->
+<!--            <groupId>org.codehaus.groovy</groupId>-->
+<!--            <artifactId>groovy-all</artifactId>-->
+<!--            <version>${groovy.all.version}</version>-->
+<!--          </dependency>-->
+<!--        </dependencies>-->
+<!--        <executions>-->
+<!--          &lt;!&ndash;-->
+<!--          Generate Java source files from specifications found in-->
+<!--          ${codegen.dir}. The groovy script is used as a "proxy"-->
+<!--          to execute a Python script with the proper arguments and-->
+<!--          environment.-->
+<!--          &ndash;&gt;-->
+<!--          <execution>-->
+<!--            <phase>generate-sources</phase>-->
+<!--            <id>generate-amqp-sources</id>-->
+<!--            <goals>-->
+<!--              <goal>execute</goal>-->
+<!--            </goals>-->
+<!--            <configuration>-->
+<!--              <properties>-->
+<!--                <script>${basedir}/codegen.py</script>-->
+<!--                <spec>-->
+<!--                  ${codegen.dir}/amqp-rabbitmq-${codegen.spec_version}.json-->
+<!--                </spec>-->
+<!--                <header>-->
+<!--                  ${project.build.directory}/generated-sources/src/main/java/com/rabbitmq/client/AMQP.java-->
+<!--                </header>-->
+<!--                <body>-->
+<!--                  ${project.build.directory}/generated-sources/src/main/java/com/rabbitmq/client/impl/AMQImpl.java-->
+<!--                </body>-->
+<!--              </properties>-->
+<!--              <source>-->
+<!--                ${groovy-scripts.dir}/generate_amqp_sources.groovy-->
+<!--              </source>-->
+<!--            </configuration>-->
+<!--          </execution>-->
 
-          <!--
-          We always remove the generated Java keystores because
-          keytool(1) complains if the destination file already exists
-          with the content we want to import.
-          -->
-          <execution>
-            <phase>generate-test-resources</phase>
-            <id>remove-old-test-keystores</id>
-            <goals>
-              <goal>execute</goal>
-            </goals>
-            <configuration>
-              <source>
-                ${groovy-scripts.dir}/remove_old_test_keystores.groovy
-              </source>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
+<!--          &lt;!&ndash;-->
+<!--          We always remove the generated Java keystores because-->
+<!--          keytool(1) complains if the destination file already exists-->
+<!--          with the content we want to import.-->
+<!--          &ndash;&gt;-->
+<!--          <execution>-->
+<!--            <phase>generate-test-resources</phase>-->
+<!--            <id>remove-old-test-keystores</id>-->
+<!--            <goals>-->
+<!--              <goal>execute</goal>-->
+<!--            </goals>-->
+<!--            <configuration>-->
+<!--              <source>-->
+<!--                ${groovy-scripts.dir}/remove_old_test_keystores.groovy-->
+<!--              </source>-->
+<!--            </configuration>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
 
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
