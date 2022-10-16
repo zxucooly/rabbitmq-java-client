@@ -15,16 +15,17 @@
 
 package com.rabbitmq.client.impl;
 
-import com.rabbitmq.client.Address;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.SocketConfigurator;
-import com.rabbitmq.client.SslContextFactory;
-
-import javax.net.SocketFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
+
+import javax.net.SocketFactory;
+
+import com.rabbitmq.client.Address;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.SocketConfigurator;
+import com.rabbitmq.client.SslContextFactory;
 
 public class SocketFrameHandlerFactory extends AbstractFrameHandlerFactory {
 
@@ -55,8 +56,11 @@ public class SocketFrameHandlerFactory extends AbstractFrameHandlerFactory {
         int portNumber = ConnectionFactory.portOrDefault(addr.getPort(), ssl);
         Socket socket = null;
         try {
+            // 创建socket
             socket = createSocket(connectionName);
+            // 添加配置socket（tcp）参数
             configurator.configure(socket);
+            // 创建TCP连接，三次握手
             socket.connect(new InetSocketAddress(hostName, portNumber),
                     connectionTimeout);
             return create(socket);

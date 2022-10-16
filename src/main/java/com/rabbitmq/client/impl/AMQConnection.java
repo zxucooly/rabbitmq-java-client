@@ -15,23 +15,53 @@
 
 package com.rabbitmq.client.impl;
 
+import java.io.EOFException;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.AlreadyClosedException;
+import com.rabbitmq.client.AuthenticationFailureException;
+import com.rabbitmq.client.BlockedCallback;
+import com.rabbitmq.client.BlockedListener;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Command;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.ExceptionHandler;
+import com.rabbitmq.client.LongString;
 import com.rabbitmq.client.Method;
-import com.rabbitmq.client.*;
+import com.rabbitmq.client.MetricsCollector;
+import com.rabbitmq.client.MissedHeartbeatException;
+import com.rabbitmq.client.NoOpMetricsCollector;
+import com.rabbitmq.client.PossibleAuthenticationFailureException;
+import com.rabbitmq.client.ProtocolVersionMismatchException;
+import com.rabbitmq.client.SaslConfig;
+import com.rabbitmq.client.SaslMechanism;
+import com.rabbitmq.client.ShutdownSignalException;
+import com.rabbitmq.client.TrafficListener;
+import com.rabbitmq.client.UnblockedCallback;
 import com.rabbitmq.client.impl.AMQChannel.BlockingRpcContinuation;
 import com.rabbitmq.client.impl.recovery.RecoveryCanBeginListener;
 import com.rabbitmq.utility.BlockingCell;
 import com.rabbitmq.utility.Utility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.EOFException;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 final class Copyright {
     final static String COPYRIGHT="Copyright (c) 2007-2021 VMware, Inc. or its affiliates.";
@@ -217,6 +247,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
      */
     public AMQConnection(ConnectionParams params, FrameHandler frameHandler, MetricsCollector metricsCollector)
     {
+        // check empty frame
         checkPreconditions();
         this.credentialsProvider = params.getCredentialsProvider();
         this._frameHandler = frameHandler;
@@ -244,6 +275,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
 
         this.credentialsRefreshService = params.getCredentialsRefreshService();
 
+        // 创建channel=0，用于连接，new 了一个AMQChannel
         this._channel0 = createChannel0();
 
         this._channelManager = null;
@@ -254,6 +286,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
 
         this.metricsCollector = metricsCollector;
 
+        // 只是传播不可恢复连接的异常
         this.errorOnWriteListener = params.getErrorOnWriteListener() != null ? params.getErrorOnWriteListener() :
             (connection, exception) -> { throw exception; }; // we just propagate the exception for non-recoverable connections
         this.workPoolTimeout = params.getWorkPoolTimeout();
@@ -293,12 +326,16 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
      */
     public void start()
             throws IOException, TimeoutException {
+        // new 一个 ConsumerWorkService
         initializeConsumerWorkService();
+
+        // new 一个 HeartbeatSender
         initializeHeartbeatSender();
         this._running = true;
         // Make sure that the first thing we do is to send the header,
         // which should cause any socket errors to show up for us, rather
         // than risking them pop out in the MainLoop
+        //确保我们做的第一件事是发送标头，这应该会导致任何套接字错误显示给我们，而不是冒着它们在 MainLoop 中弹出的风险
         AMQChannel.SimpleBlockingRpcContinuation connStartBlocker =
             new AMQChannel.SimpleBlockingRpcContinuation();
         // We enqueue an RPC continuation here without sending an RPC
@@ -306,22 +343,28 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         // the version negotiation header, the client (connection
         // initiator) is to wait for a connection.start method to
         // arrive.
+        //我们在这里将一个 RPC 延续入队而不发送 RPC 请求，因为协议规定在发送版本协商标头之后，客户端（连接发起者）要等待一个 connection.start 方法到达。
+
+        // 设置AMQChannel成员变量_activeRpc -> RpcContinuationRpcWrapper(connStartBlocker)
         _channel0.enqueueRpc(connStartBlocker);
         try {
             // The following two lines are akin to AMQChannel's
             // transmit() method for this pseudo-RPC.
             _frameHandler.setTimeout(handshakeTimeout);
+            // 客户端发送AMQP连接请求，首次，不带method
             _frameHandler.sendHeader();
         } catch (IOException ioe) {
             _frameHandler.close();
             throw ioe;
         }
 
+        // 创建主线程循环接收socket流数据，MainLoop线程
         this._frameHandler.initialize(this);
 
         AMQP.Connection.Start connStart;
         AMQP.Connection.Tune connTune = null;
         try {
+            //Connection.Start, broker->client 服务主动发送， mainLoop线程设置值，这边获取
             connStart =
                     (AMQP.Connection.Start) connStartBlocker.getReply(handshakeTimeout/2).getMethod();
 
@@ -370,6 +413,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                                         : new AMQP.Connection.SecureOk.Builder().response(response).build();
 
                 try {
+                    // Connection.Start-Ok, client->broker 客户端响应，发送密码，等待验证（Connection.Tune）
                     Method serverResponse = _channel0.rpc(method, handshakeTimeout/2).getMethod();
                     if (serverResponse instanceof AMQP.Connection.Tune) {
                         connTune = (AMQP.Connection.Tune) serverResponse;
@@ -411,6 +455,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                         MAX_UNSIGNED_SHORT, channelMax, negotiatedChannelMax);
             }
 
+            // 实例化通道管理器
             _channelManager = instantiateChannelManager(channelMax, threadFactory);
 
             int frameMax =
@@ -429,13 +474,19 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                         MAX_UNSIGNED_SHORT, heartbeat, negotiatedHeartbeat);
             }
 
+            // 定时发送心跳
             setHeartbeat(heartbeat);
 
+            //Connection.Tune-Ok, client->broker
+            //The client accepts or lowers these parameters (Tune-Ok).
             _channel0.transmit(new AMQP.Connection.TuneOk.Builder()
                                 .channelMax(channelMax)
                                 .frameMax(frameMax)
                                 .heartbeat(heartbeat)
                               .build());
+
+            // Connection.Open vhhost=/, client->broker
+            // The client formally opens the connection and selects a virtual host (Open).
             _channel0.exnWrappingRpc(new AMQP.Connection.Open.Builder()
                                       .virtualHost(_virtualHost)
                                     .build());
@@ -663,12 +714,12 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             try {
                 while (_running) {
                     Frame frame = _frameHandler.readFrame();
-                    if (frame == null) {
-                        LoggerFactory.getLogger(getClass()).info("frame = " + frame);
-                    }
-                    else {
-                        LoggerFactory.getLogger(getClass()).info("frame = " + frame + "\n>>>>" + new String(frame.getPayload()) + ">>>>\n");
-                    }
+                    //if (frame == null) {
+                    //    LoggerFactory.getLogger(getClass()).info("frame = " + frame);
+                    //}
+                    //else {
+                    //    LoggerFactory.getLogger(getClass()).info("frame = " + frame + "\n>>>>" + new String(frame.getPayload()) + ">>>>\n");
+                    //}
                     readFrame(frame);
                 }
             } catch (Throwable ex) {
@@ -721,6 +772,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             if (frame.type == AMQP.FRAME_HEARTBEAT) {
                 // Ignore it: we've already just reset the heartbeat counter.
             } else {
+                // channel0 AMQP连接和心跳保持
                 if (frame.channel == 0) { // the special channel
                     _channel0.handleFrame(frame);
                 } else {

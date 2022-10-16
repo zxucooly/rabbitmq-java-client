@@ -15,7 +15,43 @@
 
 package com.rabbitmq.client;
 
-import com.rabbitmq.client.impl.*;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeoutException;
+import java.util.function.BiConsumer;
+import java.util.function.Predicate;
+
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+
+import com.rabbitmq.client.impl.AMQConnection;
+import com.rabbitmq.client.impl.ConnectionParams;
+import com.rabbitmq.client.impl.CredentialsProvider;
+import com.rabbitmq.client.impl.CredentialsRefreshService;
+import com.rabbitmq.client.impl.DefaultCredentialsProvider;
+import com.rabbitmq.client.impl.DefaultCredentialsRefreshService;
+import com.rabbitmq.client.impl.DefaultExceptionHandler;
+import com.rabbitmq.client.impl.ErrorOnWriteListener;
+import com.rabbitmq.client.impl.FrameHandler;
+import com.rabbitmq.client.impl.FrameHandlerFactory;
+import com.rabbitmq.client.impl.SocketFrameHandlerFactory;
 import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.client.impl.nio.SocketChannelFrameHandlerFactory;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
@@ -23,22 +59,6 @@ import com.rabbitmq.client.impl.recovery.RetryHandler;
 import com.rabbitmq.client.impl.recovery.TopologyRecoveryFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map.Entry;
-import java.util.function.BiConsumer;
-import javax.net.SocketFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.Predicate;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 
@@ -1195,7 +1215,10 @@ public class ConnectionFactory implements Cloneable {
             this.metricsCollector = new NoOpMetricsCollector();
         }
         // make sure we respect the provided thread factory
+        // 创建数据处理工厂，1 aio SocketFrameHandlerFactory  2 nio SocketChannelFrameHandlerFactory
         FrameHandlerFactory fhFactory = createFrameHandlerFactory();
+
+        // 封装连接参数
         ConnectionParams params = params(executor);
         // set client-provided via a client property
         if (clientProvidedName != null) {
@@ -1204,6 +1227,7 @@ public class ConnectionFactory implements Cloneable {
             params.setClientProperties(properties);
         }
 
+        // 是否创建 自动重连的连接，默认是
         if (isAutomaticRecoveryEnabled()) {
             // see com.rabbitmq.client.impl.recovery.RecoveryAwareAMQConnectionFactory#newConnection
             // No Sonar: no need to close this resource because we're the one that creates it
@@ -1213,13 +1237,17 @@ public class ConnectionFactory implements Cloneable {
             conn.init();
             return conn;
         } else {
+            // 一个一个遍历创建连接，传入多个IP、端口，有一个地址连接成功就可以，非集群
             List<Address> addrs = addressResolver.getAddresses();
             Exception lastException = null;
             for (Address addr : addrs) {
                 try {
+                    // 创建数据处理器(socket tcp三次握手)，1 aio SocketFrameHandler  2 nio SocketChannelFrameHandler
                     FrameHandler handler = fhFactory.create(addr, clientProvidedName);
+                    // 创建Amqp连接，Amqp握手Start-Ok 啥的
                     AMQConnection conn = createConnection(params, handler, metricsCollector);
                     conn.start();
+                    // 日志收集器，记录日志等
                     this.metricsCollector.newConnection(conn);
                     return conn;
                 } catch (IOException e) {

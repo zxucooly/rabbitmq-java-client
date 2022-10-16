@@ -16,21 +16,26 @@
 
 package com.rabbitmq.client.impl;
 
-import com.rabbitmq.client.*;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
+
 import com.rabbitmq.client.AMQP.Basic;
 import com.rabbitmq.client.AMQP.Confirm;
 import com.rabbitmq.client.AMQP.Exchange;
 import com.rabbitmq.client.AMQP.Queue;
 import com.rabbitmq.client.AMQP.Tx;
+import com.rabbitmq.client.AlreadyClosedException;
+import com.rabbitmq.client.ChannelContinuationTimeoutException;
+import com.rabbitmq.client.Command;
+import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Method;
+import com.rabbitmq.client.ShutdownSignalException;
+import com.rabbitmq.client.TrafficListener;
 import com.rabbitmq.utility.BlockingValueOrException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
 
 /**
  * Base class modelling an AMQ channel. Subclasses implement
@@ -105,7 +110,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
      * Private API - When the Connection receives a Frame for this
      * channel, it passes it to this method.
      * @param frame the incoming frame
-     * @throws IOException if an error is encountered
+     * @throws IOException if an error is encounteredokOK
      */
     public void handleFrame(Frame frame) throws IOException {
         AMQCommand command = _command;
